@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BrainFit: Тренировка мозга</title>
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-gray: #F2F2F7;
+            --ios-dark: #1C1C1E;
+            --ios-red: #FF3B30;
+            --ios-green: #34C759;
+            --ios-purple: #AF52DE;
+            --ios-orange: #FF9500;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background-color: var(--ios-gray);
+            color: var(--ios-dark);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 12px 15px;
+            text-align: center;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 30px;
+        }
+        
+        .games-menu {
+            display: flex;
+            overflow-x: auto;
+            padding: 8px;
+            background: white;
+            border-bottom: 1px solid #e5e5ea;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .game-tab {
+            padding: 8px 12px;
+            margin: 0 4px;
+            border-radius: 16px;
+            background: var(--ios-gray);
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        
+        .game-tab.active {
+            background: var(--ios-blue);
+            color: white;
+        }
+        
+        .game-container {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 15px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+        }
+        
+        .game-container.active {
+            display: flex;
+        }
+        
+        /* Общие стили для игр */
+        .grid {
+            display: grid;
+            grid-gap: 8px;
+            margin: 15px 0;
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .cell {
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            width: 100%;
+            aspect-ratio: 1/1;
+        }
+        
+        .cell.active {
+            background: var(--ios-blue);
+            color: white;
+            transform: scale(0.95);
+        }
+        
+        .cell.correct {
+            background: var(--ios-green);
+            color: white;
+        }
+        
+        .cell.wrong {
+            background: var(--ios-red);
+            color: white;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+            gap: 8px;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+            min-width: 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #8E8E93;
+        }
+        
+        .btn {
+            background: var(--ios-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            margin-top: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .btn:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+        
+        .btn:disabled {
+            background: #C7C7CC;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: var(--ios-gray);
+            color: var(--ios-dark);
+            margin-top: 8px;
+        }
+        
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 500;
+            z-index: 100;
+            display: none;
+            max-width: 80%;
+            text-align: center;
+        }
+        
+        .level-up {
+            animation: pulse 0.5s ease infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { transform: translate(-50%, -50%) scale(1); }
+            to { transform: translate(-50%, -50%) scale(1.05); }
+        }
+        
+        /* Стили для игры "Быстрые цифры" */
+        .number-display {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 20px 0;
+            color: var(--ios-dark);
+            text-align: center;
+            width: 100%;
+        }
+        
+        .number-input {
+            font-size: 20px;
+            padding: 12px;
+            width: 100%;
+            max-width: 200px;
+            text-align: center;
+            border: 2px solid var(--ios-blue);
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        
+        /* Стили для игры "Цвета и слова" */
+        .color-word {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 15px 0;
+            padding: 15px 30px;
+            border-radius: 12px;
+            text-align: center;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .color-options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin: 15px 0;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .color-option {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .color-option:active {
+            transform: scale(0.95);
+        }
+        
+        /* Стили для игры "Найди пару" */
+        .memory-card {
+            width: 22vw;
+            height: 22vw;
+            max-width: 70px;
+            max-height: 70px;
+            perspective: 1000px;
+            margin: 2px;
+        }
+        
+        .memory-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        
+        .memory-card.flipped .memory-card-inner {
+            transform: rotateY(180deg);
+        }
+        
+        .memory-card-front, .memory-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        
+        .memory-card-front {
+            background: white;
+        }
+        
+        .memory-card-back {
+            background: var(--ios-blue);
+            color: white;
+            transform: rotateY(180deg);
+        }
+        
+        /* Стили для игры "Лабиринт взгляда" */
+        .eye-maze {
+            position: relative;
+            width: 90vw;
+            height: 90vw;
+            max-width: 300px;
+            max-height: 300px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 10px 0;
+        }
+        
+        .maze-path {
+            position: absolute;
+            background: var(--ios-gray);
+            transition: background 0.3s;
+        }
+        
+        .maze-start {
+            background: var(--ios-green);
+        }
+        
+        .maze-end {
+            background: var(--ios-blue);
+        }
+        
+        .maze-error {
+            background: var(--ios-red);
+        }
+        
+        /* Настройки и правила */
+        .settings-btn, .help-btn {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            top: 12px;
+        }
+        
+        .settings-btn {
+            right: 15px;
+        }
+        
+        .help-btn {
+            left: 15px;
+        }
+        
+        .settings-panel, .rules-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 1000;
+            transition: right 0.3s ease;
+            padding: 20px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .rules-panel {
+            padding-top: 50px;
+        }
+        
+        .settings-panel.active, .rules-panel.active {
+            right: 0;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        
+        .settings-panel h2, .rules-panel h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .setting-item {
+            margin-bottom: 15px;
+        }
+        
+        .setting-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .rules-content {
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        
+        .rules-content h3 {
+            margin: 15px 0 10px;
+            color: var(--ios-blue);
+        }
+        
+        .rules-content p {
+            margin-bottom: 10px;
+        }
+        
+        /* Адаптация для очень маленьких экранов */
+        @media (max-height: 600px) {
+            .stat-box {
+                padding: 8px;
+            }
+            
+            .stat-value {
+                font-size: 18px;
+            }
+            
+            .btn {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            
+            .number-display {
+                font-size: 36px;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="help-btn" onclick="showRules()">❓</div>
+        <h1 id="game-title">BrainFit</h1>
+        <div class="settings-btn" onclick="toggleSettings()">⚙️</div>
+    </div>
+    
+    <div class="games-menu">
+        <div class="game-tab active" data-game="memory-matrix">Memory Matrix</div>
+        <div class="game-tab" data-game="fast-numbers">Быстрые цифры</div>
+        <div class="game-tab" data-game="color-words">Цвета и слова</div>
+        <div class="game-tab" data-game="memory-pairs">Найди пару</div>
+        <div class="game-tab" data-game="eye-maze">Лабиринт взгляда</div>
+    </div>
+    
+    <!-- Memory Matrix -->
+    <div class="game-container active" id="memory-matrix">
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="mm-level">1</div>
+                <div class="stat-label">Уровень</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="mm-score">0</div>
+                <div class="stat-label">Очки</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="mm-best">0</div>
+                <div class="stat-label">Рекорд</div>
+            </div>
+        </div>
+        
+        <div class="grid" id="mm-grid"></div>
+        
+        <button class="btn" id="mm-start-btn">Начать игру</button>
+        <button class="btn btn-secondary" onclick="showRules('memory-matrix')">Правила игры</button>
+    </div>
+    
+    <!-- Быстрые цифры -->
+    <div class="game-container" id="fast-numbers">
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="fn-level">1</div>
+                <div class="stat-label">Уровень</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="fn-score">0</div>
+                <div class="stat-label">Очки</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="fn-best">0</div>
+                <div class="stat-label">Рекорд</div>
+            </div>
+        </div>
+        
+        <div class="number-display" id="fn-display"></div>
+        <input type="text" class="number-input" id="fn-input" placeholder="Введите число" inputmode="numeric">
+        <button class="btn" id="fn-start-btn">Начать игру</button>
+        <button class="btn btn-secondary" onclick="showRules('fast-numbers')">Правила игры</button>
+    </div>
+    
+    <!-- Цвета и слова -->
+    <div class="game-container" id="color-words">
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="cw-level">1</div>
+                <div class="stat-label">Уровень</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="cw-score">0</div>
+                <div class="stat-label">Очки</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="cw-best">0</div>
+                <div class="stat-label">Рекорд</div>
+            </div>
+        </div>
+        
+        <div class="color-word" id="cw-text"></div>
+        <div class="color-options" id="cw-options"></div>
+        <button class="btn" id="cw-start-btn">Начать игру</button>
+        <button class="btn btn-secondary" onclick="showRules('color-words')">Правила игры</button>
+    </div>
+    
+    <!-- Найди пару -->
+    <div class="game-container" id="memory-pairs">
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="mp-level">1</div>
+                <div class="stat-label">Уровень</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="mp-score">0</div>
+                <div class="stat-label">Очки</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="mp-best">0</div>
+                <div class="stat-label">Рекорд</div>
+            </div>
+        </div>
+        
+        <div class="grid" id="mp-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+        <button class="btn" id="mp-start-btn">Начать игру</button>
+        <button class="btn btn-secondary" onclick="showRules('memory-pairs')">Правила игры</button>
+    </div>
+    
+    <!-- Лабиринт взгляда -->
+    <div class="game-container" id="eye-maze">
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="em-level">1</div>
+                <div class="stat-label">Уровень</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="em-score">0</div>
+                <div class="stat-label">Очки</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="em-best">0</div>
+                <div class="stat-label">Рекорд</div>
+            </div>
+        </div>
+        
+        <div class="eye-maze" id="em-maze"></div>
+        <button class="btn" id="em-start-btn">Начать игру</button>
+        <button class="btn btn-secondary" onclick="showRules('eye-maze')">Правила игры</button>
+    </div>
+    
+    <div class="message" id="message"></div>
+    <div class="overlay" id="overlay"></div>
+    
+    <!-- Панель настроек -->
+    <div class="settings-panel" id="settings-panel">
+        <div class="close-btn" onclick="toggleSettings()">×</div>
+        <h2>Настройки</h2>
+        
+        <div class="setting-item">
+            <label for="sound">Звук:</label>
+            <select id="sound">
+                <option value="on">Включен</option>
+                <option value="off">Выключен</option>
+            </select>
+        </div>
+        
+        <div class="setting-item">
+            <label for="vibration">Вибрация:</label>
+            <select id="vibration">
+                <option value="on">Включена</option>
+                <option value="off">Выключена</option>
+            </select>
+        </div>
+        
+        <button class="btn" onclick="resetProgress()">Сбросить прогресс</button>
+    </div>
+    
+    <!-- Панель правил -->
+    <div class="rules-panel" id="rules-panel">
+        <div class="close-btn" onclick="hideRules()">×</div>
+        <div class="rules-content" id="rules-content"></div>
+    </div>
+
+    <script>
+        // ==================== Общие функции ====================
+        let soundEnabled = true;
+        let vibrationEnabled = true;
+        const message = document.getElementById('message');
+        const settingsPanel = document.getElementById('settings-panel');
+        const rulesPanel = document.getElementById('rules-panel');
+        const rulesContent = document.getElementById('rules-content');
+        const overlay = document.getElementById('overlay');
+        
+        // Правила для каждой игры
+        const gameRules = {
+            'memory-matrix': `
+                <h2>Memory Matrix</h2>
+                <h3>Как играть:</h3>
+                <p>Запомните последовательность подсвечивающихся клеток и повторите её, нажимая на них в том же порядке.</p>
+                
+                <h3>Развивает:</h3>
+                <p>Кратковременную память, концентрацию внимания, зрительное восприятие.</p>
+                
+                <h3>Советы:</h3>
+                <p>1. Разбивайте последовательность на части<br>
+                2. Создавайте ассоциации с позициями клеток<br>
+                3. Тренируйтесь регулярно для улучшения результатов</p>
+            `,
+            'fast-numbers': `
+                <h2>Быстрые цифры</h2>
+                <h3>Как играть:</h3>
+                <p>Запомните показанное число и введите его, когда оно исчезнет с экрана. С каждым уровнем числа становятся длиннее.</p>
+                
+                <h3>Развивает:</h3>
+                <p>Рабочую память, скорость восприятия информации, точность запоминания.</p>
+                
+                <h3>Советы:</h3>
+                <p>1. Группируйте цифры по 2-3 для лучшего запоминания<br>
+                2. Повторяйте число про себя, пока оно на экране<br>
+                3. Начинайте с медленного темпа и постепенно ускоряйтесь</p>
+            `,
+            'color-words': `
+                <h2>Цвета и слова</h2>
+                <h3>Как играть:</h3>
+                <p>Выбирайте цвет, которым написано слово, а не то, что оно означает. Например, если слово "Красный" написано синим цветом, нужно выбрать синий.</p>
+                
+                <h3>Развивает:</h3>
+                <p>Когнитивную гибкость, способность подавлять автоматические реакции, концентрацию внимания.</p>
+                
+                <h3>Советы:</h3>
+                <p>1. Не читайте слово, а сразу смотрите на цвет<br>
+                2. Делайте глубокий вдох перед ответом<br>
+                3. Тренируйтесь ежедневно для улучшения скорости реакции</p>
+            `,
+            'memory-pairs': `
+                <h2>Найди пару</h2>
+                <h3>Как играть:</h3>
+                <p>Найдите все пары одинаковых карточек, переворачивая их по две за ход. Запоминайте расположение карт, чтобы быстрее находить пары.</p>
+                
+                <h3>Развивает:</h3>
+                <p>Визуальную память, пространственное мышление, стратегическое планирование.</p>
+                
+                <h3>Советы:</h3>
+                <p>1. Создавайте мысленную карту расположения карт<br>
+                2. Начинайте с углов и краёв<br>
+                3. Тренируйте как кратковременную, так и долговременную память</p>
+            `,
+            'eye-maze': `
+                <h2>Лабиринт взгляда</h2>
+                <h3>Как играть:</h3>
+                <p>Проведите взглядом путь от старта (зелёный) до финиша (синий), не отрывая взгляда и не кликая. Избегайте тупиков и неправильных путей.</p>
+                
+                <h3>Развивает:</h3>
+                <p>Периферическое зрение, концентрацию внимания, управление взглядом.</p>
+                
+                <h3>Советы:</h3>
+                <p>1. Используйте периферическое зрение для обзора<br>
+                2. Двигайтесь плавно и без резких скачков<br>
+                3. Регулярные тренировки улучшат ваши навыки</p>
+            `
+        };
+        
+        // Воспроизведение звука
+        function playSound(type) {
+            if (!soundEnabled) return;
+            // В реальном приложении здесь были бы Audio объекты
+            console.log('Play sound:', type);
+        }
+        
+        // Вибрация
+        function vibrate() {
+            if (!vibrationEnabled || !navigator.vibrate) return;
+            navigator.vibrate(200);
+        }
+        
+        // Показать сообщение
+        function showMessage(text, className = '', duration = 1000) {
+            message.textContent = text;
+            message.className = 'message ' + className;
+            message.style.display = 'block';
+            
+            setTimeout(() => {
+                message.style.display = 'none';
+                message.className = 'message';
+            }, duration);
+        }
+        
+        // Загрузка настроек
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('brainFitSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                soundEnabled = settings.sound !== 'off';
+                vibrationEnabled = settings.vibration !== 'off';
+                
+                document.getElementById('sound').value = soundEnabled ? 'on' : 'off';
+                document.getElementById('vibration').value = vibrationEnabled ? 'on' : 'off';
+            }
+        }
+        
+        // Сохранение настроек
+        function saveSettings() {
+            const settings = {
+                sound: document.getElementById('sound').value,
+                vibration: document.getElementById('vibration').value
+            };
+            
+            localStorage.setItem('brainFitSettings', JSON.stringify(settings));
+            
+            // Обновляем текущие настройки
+            soundEnabled = settings.sound === 'on';
+            vibrationEnabled = settings.vibration === 'on';
+        }
+        
+        // Сброс прогресса
+        function resetProgress() {
+            if (confirm('Вы уверены, что хотите сбросить весь прогресс?')) {
+                localStorage.removeItem('brainFitProgress');
+                showMessage('Прогресс сброшен', '', 1000);
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+        
+        // Показать правила игры
+        function showRules(gameId = null) {
+            if (gameId) {
+                rulesContent.innerHTML = gameRules[gameId];
+            }
+            rulesPanel.classList.add('active');
+            overlay.style.display = 'block';
+        }
+        
+        // Скрыть правила
+        function hideRules() {
+            rulesPanel.classList.remove('active');
+            overlay.style.display = 'none';
+        }
+        
+        // Открыть/закрыть настройки
+        function toggleSettings() {
+            settingsPanel.classList.toggle('active');
+            overlay.style.display = settingsPanel.classList.contains('active') ? 'block' : 'none';
+        }
+        
+        // Переключение между играми
+        function setupGameTabs() {
+            const tabs = document.querySelectorAll('.game-tab');
+            const containers = document.querySelectorAll('.game-container');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Убираем активный класс у всех
+                    tabs.forEach(t => t.classList.remove('active'));
+                    containers.forEach(c => c.classList.remove('active'));
+                    
+                    // Добавляем активный класс к выбранной
+                    tab.classList.add('active');
+                    const gameId = tab.dataset.game;
+                    document.getElementById(gameId).classList.add('active');
+                    document.getElementById('game-title').textContent = tab.textContent;
+                });
+            });
+        }
+        
+        // ==================== Инициализация всех игр ====================
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            setupGameTabs();
+            
+            // Инициализация Memory Matrix
+            initMemoryMatrix();
+            
+            // Инициализация Быстрых цифр
+            initFastNumbers();
+            
+            // Инициализация Цвета и слова
+            initColorWords();
+            
+            // Инициализация Найди пару
+            initMemoryPairs();
+            
+            // Инициализация Лабиринта взгляда
+            initEyeMaze();
+            
+            // Сохранение настроек при изменении
+            document.getElementById('sound').addEventListener('change', saveSettings);
+            document.getElementById('vibration').addEventListener('change', saveSettings);
+            
+            // Закрыть настройки/правила при клике на overlay
+            overlay.addEventListener('click', () => {
+                settingsPanel.classList.remove('active');
+                rulesPanel.classList.remove('active');
+                overlay.style.display = 'none';
+            });
+        });
+        
+        // ==================== Memory Matrix ====================
+        function initMemoryMatrix() {
+            const grid = document.getElementById('mm-grid');
+            const startBtn = document.getElementById('mm-start-btn');
+            const levelDisplay = document.getElementById('mm-level');
+            const scoreDisplay = document.getElementById('mm-score');
+            const bestDisplay = document.getElementById('mm-best');
+            
+            let level = 1;
+            let score = 0;
+            let bestScore = 0;
+            let sequence = [];
+            let userSequence = [];
+            let isPlaying = false;
+            let isShowingSequence = false;
+            
+            // Загрузка прогресса
+            function loadProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress');
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    bestScore = progress.memoryMatrix?.bestScore || 0;
+                    bestDisplay.textContent = bestScore;
+                }
+            }
+            
+            // Сохранение прогресса
+            function saveProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress') || '{}';
+                const progress = JSON.parse(savedProgress);
+                
+                progress.memoryMatrix = {
+                    bestScore: Math.max(bestScore, progress.memoryMatrix?.bestScore || 0)
+                };
+                
+                localStorage.setItem('brainFitProgress', JSON.stringify(progress));
+            }
+            
+            // Создание сетки
+            function createGrid(size) {
+                grid.innerHTML = '';
+                grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+                
+                for (let i = 0; i < size * size; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.index = i;
+                    cell.addEventListener('click', () => handleCellClick(i));
+                    grid.appendChild(cell);
+                }
+            }
+            
+            // Начало игры
+            function startGame() {
+                if (isPlaying) return;
+                
+                level = 1;
+                score = 0;
+                sequence = [];
+                userSequence = [];
+                isPlaying = true;
+                
+                startBtn.disabled = true;
+                startBtn.textContent = 'Играем...';
+                
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                
+                nextLevel();
+            }
+            
+            // Следующий уровень
+            function nextLevel() {
+                userSequence = [];
+                levelDisplay.textContent = level;
+                
+                // Определяем размер сетки
+                let gridSize = 3;
+                if (level >= 5) gridSize = 4;
+                if (level >= 10) gridSize = 5;
+                
+                createGrid(gridSize);
+                
+                // Добавляем новую ячейку в последовательность
+                const cells = document.querySelectorAll('#mm-grid .cell');
+                const randomIndex = Math.floor(Math.random() * cells.length);
+                sequence.push(randomIndex);
+                
+                // Показываем последовательность
+                showSequence();
+            }
+            
+            // Показать последовательность
+            function showSequence() {
+                isShowingSequence = true;
+                let i = 0;
+                
+                const interval = setInterval(() => {
+                    if (i >= sequence.length) {
+                        clearInterval(interval);
+                        isShowingSequence = false;
+                        return;
+                    }
+                    
+                    const index = sequence[i];
+                    const cell = document.querySelector(`#mm-grid .cell[data-index="${index}"]`);
+                    
+                    cell.classList.add('active');
+                    playSound('tap');
+                    
+                    setTimeout(() => {
+                        cell.classList.remove('active');
+                    }, 500);
+                    
+                    i++;
+                }, 800);
+            }
+            
+            // Обработка клика по ячейке
+            function handleCellClick(index) {
+                if (!isPlaying || isShowingSequence) return;
+                
+                const cell = document.querySelector(`#mm-grid .cell[data-index="${index}"]`);
+                cell.classList.add('active');
+                playSound('tap');
+                
+                setTimeout(() => {
+                    cell.classList.remove('active');
+                }, 200);
+                
+                userSequence.push(index);
+                
+                // Проверяем правильность
+                if (index !== sequence[userSequence.length - 1]) {
+                    gameOver();
+                    return;
+                }
+                
+                // Если последовательность завершена
+                if (userSequence.length === sequence.length) {
+                    score += level * 10;
+                    level++;
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestDisplay.textContent = bestScore;
+                        saveProgress();
+                    }
+                    
+                    scoreDisplay.textContent = score;
+                    
+                    // Показываем сообщение об успехе
+                    showMessage('Отлично!', 'level-up');
+                    playSound('success');
+                    
+                    // Переход к следующему уровню
+                    setTimeout(() => {
+                        nextLevel();
+                    }, 1500);
+                }
+            }
+            
+            // Конец игры
+            function gameOver() {
+                isPlaying = false;
+                
+                // Подсвечиваем неправильную ячейку
+                const wrongIndex = userSequence.length - 1;
+                const wrongCell = document.querySelector(`#mm-grid .cell[data-index="${userSequence[wrongIndex]}"]`);
+                wrongCell.classList.add('wrong');
+                
+                // Подсвечиваем правильную ячейку
+                const correctCell = document.querySelector(`#mm-grid .cell[data-index="${sequence[wrongIndex]}"]`);
+                correctCell.classList.add('correct');
+                
+                playSound('error');
+                vibrate();
+                
+                // Показываем сообщение
+                showMessage(`Игра окончена! Уровень: ${level}`, '', 2000);
+                
+                // Обновляем кнопку
+                startBtn.disabled = false;
+                startBtn.textContent = 'Играть снова';
+                
+                // Сохраняем прогресс
+                saveProgress();
+            }
+            
+            // Инициализация
+            loadProgress();
+            createGrid(3);
+            startBtn.addEventListener('click', startGame);
+        }
+        
+        // ==================== Быстрые цифры ====================
+        function initFastNumbers() {
+            const display = document.getElementById('fn-display');
+            const input = document.getElementById('fn-input');
+            const startBtn = document.getElementById('fn-start-btn');
+            const levelDisplay = document.getElementById('fn-level');
+            const scoreDisplay = document.getElementById('fn-score');
+            const bestDisplay = document.getElementById('fn-best');
+            
+            let level = 1;
+            let score = 0;
+            let bestScore = 0;
+            let currentNumber = '';
+            let isPlaying = false;
+            let timer;
+            
+            // Загрузка прогресса
+            function loadProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress');
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    bestScore = progress.fastNumbers?.bestScore || 0;
+                    bestDisplay.textContent = bestScore;
+                }
+            }
+            
+            // Сохранение прогресса
+            function saveProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress') || '{}';
+                const progress = JSON.parse(savedProgress);
+                
+                progress.fastNumbers = {
+                    bestScore: Math.max(bestScore, progress.fastNumbers?.bestScore || 0)
+                };
+                
+                localStorage.setItem('brainFitProgress', JSON.stringify(progress));
+            }
+            
+            // Начало игры
+            function startGame() {
+                if (isPlaying) return;
+                
+                level = 1;
+                score = 0;
+                isPlaying = true;
+                input.value = '';
+                input.disabled = false;
+                input.focus();
+                
+                startBtn.disabled = true;
+                startBtn.textContent = 'Играем...';
+                
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                
+                nextNumber();
+            }
+            
+            // Генерация следующего числа
+            function nextNumber() {
+                const digits = Math.min(3 + Math.floor(level / 3), 8); // От 3 до 8 цифр
+                currentNumber = '';
+                
+                for (let i = 0; i < digits; i++) {
+                    currentNumber += Math.floor(Math.random() * 10);
+                }
+                
+                display.textContent = currentNumber;
+                
+                // Время показа зависит от сложности
+                const showTime = Math.max(1000, 3000 - level * 100);
+                
+                setTimeout(() => {
+                    display.textContent = '?';
+                    input.value = '';
+                    timer = setTimeout(checkTimeout, 3000);
+                }, showTime);
+            }
+            
+            // Проверка ввода
+            input.addEventListener('input', () => {
+                if (!isPlaying) return;
+                
+                if (input.value === currentNumber) {
+                    clearTimeout(timer);
+                    handleCorrectAnswer();
+                }
+            });
+            
+            // Правильный ответ
+            function handleCorrectAnswer() {
+                score += level * 5;
+                level++;
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestDisplay.textContent = bestScore;
+                    saveProgress();
+                }
+                
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                
+                playSound('success');
+                showMessage('Верно!', 'level-up');
+                
+                setTimeout(() => {
+                    nextNumber();
+                }, 1000);
+            }
+            
+            // Время вышло
+            function checkTimeout() {
+                if (!isPlaying) return;
+                
+                playSound('error');
+                vibrate();
+                showMessage(`Время вышло! Число: ${currentNumber}`, '', 2000);
+                gameOver();
+            }
+            
+            // Конец игры
+            function gameOver() {
+                isPlaying = false;
+                input.disabled = true;
+                
+                startBtn.disabled = false;
+                startBtn.textContent = 'Играть снова';
+                
+                saveProgress();
+            }
+            
+            // Инициализация
+            loadProgress();
+            input.disabled = true;
+            startBtn.addEventListener('click', startGame);
+        }
+        
+        // ==================== Цвета и слова ====================
+        function initColorWords() {
+            const textDisplay = document.getElementById('cw-text');
+            const optionsContainer = document.getElementById('cw-options');
+            const startBtn = document.getElementById('cw-start-btn');
+            const levelDisplay = document.getElementById('cw-level');
+            const scoreDisplay = document.getElementById('cw-score');
+            const bestDisplay = document.getElementById('cw-best');
+            
+            const colors = [
+                { name: 'Красный', value: '#FF3B30' },
+                { name: 'Зеленый', value: '#34C759' },
+                { name: 'Синий', value: '#007AFF' },
+                { name: 'Желтый', value: '#FFCC00' },
+                { name: 'Фиолетовый', value: '#AF52DE' },
+                { name: 'Оранжевый', value: '#FF9500' },
+                { name: 'Розовый', value: '#FF2D55' },
+                { name: 'Голубой', value: '#5AC8FA' }
+            ];
+            
+            let level = 1;
+            let score = 0;
+            let bestScore = 0;
+            let isPlaying = false;
+            let currentColor;
+            let currentWord;
+            let correctOption;
+            
+            // Загрузка прогресса
+            function loadProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress');
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    bestScore = progress.colorWords?.bestScore || 0;
+                    bestDisplay.textContent = bestScore;
+                }
+            }
+            
+            // Сохранение прогресса
+            function saveProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress') || '{}';
+                const progress = JSON.parse(savedProgress);
+                
+                progress.colorWords = {
+                    bestScore: Math.max(bestScore, progress.colorWords?.bestScore || 0)
+                };
+                
+                localStorage.setItem('brainFitProgress', JSON.stringify(progress));
+            }
+            
+            // Начало игры
+            function startGame() {
+                if (isPlaying) return;
+                
+                level = 1;
+                score = 0;
+                isPlaying = true;
+                
+                startBtn.disabled = true;
+                startBtn.textContent = 'Играем...';
+                
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                
+                nextRound();
+            }
+            
+            // Следующий раунд
+            function nextRound() {
+                // Выбираем случайный цвет и слово
+                const colorIndex = Math.floor(Math.random() * colors.length);
+                const wordIndex = Math.floor(Math.random() * colors.length);
+                
+                currentColor = colors[colorIndex];
+                currentWord = colors[wordIndex];
+                
+                // Определяем правильный ответ (50/50 - цвет слова или текст слова)
+                correctOption = Math.random() > 0.5 ? 'color' : 'text';
+                
+                // Отображаем слово
+                textDisplay.textContent = currentWord.name;
+                textDisplay.style.color = currentColor.value;
+                textDisplay.style.backgroundColor = 'white';
+                
+                // Создаем варианты ответов
+                createOptions();
+            }
+            
+            // Создание вариантов ответов
+            function createOptions() {
+                optionsContainer.innerHTML = '';
+                
+                // Выбираем 4 случайных цвета (включая правильный)
+                const options = [];
+                const correctColor = correctOption === 'color' ? currentColor.value : currentWord.value;
+                
+                // Добавляем правильный ответ
+                options.push(correctColor);
+                
+                // Добавляем случайные неправильные ответы
+                while (options.length < 4) {
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)].value;
+                    if (!options.includes(randomColor) && randomColor !== correctColor) {
+                        options.push(randomColor);
+                    }
+                }
+                
+                // Перемешиваем варианты
+                options.sort(() => Math.random() - 0.5);
+                
+                // Создаем кнопки вариантов
+                options.forEach(color => {
+                    const option = document.createElement('div');
+                    option.className = 'color-option';
+                    option.style.backgroundColor = color;
+                    option.addEventListener('click', () => checkAnswer(color));
+                    optionsContainer.appendChild(option);
+                });
+            }
+            
+            // Проверка ответа
+            function checkAnswer(selectedColor) {
+                if (!isPlaying) return;
+                
+                const correctColor = correctOption === 'color' ? currentColor.value : currentWord.value;
+                
+                if (selectedColor === correctColor) {
+                    // Правильный ответ
+                    score += level * 2;
+                    level++;
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestDisplay.textContent = bestScore;
+                        saveProgress();
+                    }
+                    
+                    levelDisplay.textContent = level;
+                    scoreDisplay.textContent = score;
+                    
+                    playSound('success');
+                    showMessage('Верно!', 'level-up');
+                    
+                    setTimeout(() => {
+                        nextRound();
+                    }, 1000);
+                } else {
+                    // Неправильный ответ
+                    playSound('error');
+                    vibrate();
+                    showMessage('Неверно!', '', 1000);
+                    gameOver();
+                }
+            }
+            
+            // Конец игры
+            function gameOver() {
+                isPlaying = false;
+                
+                startBtn.disabled = false;
+                startBtn.textContent = 'Играть снова';
+                
+                saveProgress();
+            }
+            
+            // Инициализация
+            loadProgress();
+            startBtn.addEventListener('click', startGame);
+        }
+        
+        // ==================== Найди пару ====================
+        function initMemoryPairs() {
+            const grid = document.getElementById('mp-grid');
+            const startBtn = document.getElementById('mp-start-btn');
+            const levelDisplay = document.getElementById('mp-level');
+            const scoreDisplay = document.getElementById('mp-score');
+            const bestDisplay = document.getElementById('mp-best');
+            
+            const symbols = ['🍎', '🍌', '🍒', '🍓', '🍊', '🍋', '🍐', '🍉', '🍇', '🍑', '🍍', '🥥'];
+            
+            let level = 1;
+            let score = 0;
+            let bestScore = 0;
+            let isPlaying = false;
+            let cards = [];
+            let flippedCards = [];
+            let matchedPairs = 0;
+            let totalPairs = 0;
+            let timer;
+            
+            // Загрузка прогресса
+            function loadProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress');
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    bestScore = progress.memoryPairs?.bestScore || 0;
+                    bestDisplay.textContent = bestScore;
+                }
+            }
+            
+            // Сохранение прогресса
+            function saveProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress') || '{}';
+                const progress = JSON.parse(savedProgress);
+                
+                progress.memoryPairs = {
+                    bestScore: Math.max(bestScore, progress.memoryPairs?.bestScore || 0)
+                };
+                
+                localStorage.setItem('brainFitProgress', JSON.stringify(progress));
+            }
+            
+            // Начало игры
+            function startGame() {
+                if (isPlaying) return;
+                
+                level = 1;
+                score = 0;
+                isPlaying = true;
+                matchedPairs = 0;
+                totalPairs = 4 + Math.floor(level / 2);
+                
+                startBtn.disabled = true;
+                startBtn.textContent = 'Играем...';
+                
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                
+                createBoard();
+            }
+            
+            // Создание игрового поля
+            function createBoard() {
+                grid.innerHTML = '';
+                flippedCards = [];
+                matchedPairs = 0;
+                
+                // Выбираем символы для текущего уровня
+                const pairs = symbols.slice(0, totalPairs);
+                const cardValues = [...pairs, ...pairs];
+                
+                // Перемешиваем карты
+                cardValues.sort(() => Math.random() - 0.5);
+                
+                // Создаем карты
+                cards = cardValues.map((value, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'memory-card';
+                    card.dataset.index = index;
+                    
+                    const cardInner = document.createElement('div');
+                    cardInner.className = 'memory-card-inner';
+                    
+                    const cardFront = document.createElement('div');
+                    cardFront.className = 'memory-card-front';
+                    
+                    const cardBack = document.createElement('div');
+                    cardBack.className = 'memory-card-back';
+                    cardBack.textContent = value;
+                    
+                    cardInner.appendChild(cardFront);
+                    cardInner.appendChild(cardBack);
+                    card.appendChild(cardInner);
+                    
+                    card.addEventListener('click', () => flipCard(card, index));
+                    
+                    grid.appendChild(card);
+                    return { element: card, value, flipped: false, matched: false };
+                });
+                
+                // Показываем карты на 3 секунды в начале
+                showAllCards();
+                setTimeout(hideAllCards, 3000);
+            }
+            
+            // Показать все карты
+            function showAllCards() {
+                cards.forEach(card => {
+                    card.element.classList.add('flipped');
+                    card.flipped = true;
+                });
+            }
+            
+            // Скрыть все карты
+            function hideAllCards() {
+                cards.forEach(card => {
+                    card.element.classList.remove('flipped');
+                    card.flipped = false;
+                });
+            }
+            
+            // Перевернуть карту
+            function flipCard(cardElement, index) {
+                if (!isPlaying || flippedCards.length >= 2 || cards[index].flipped || cards[index].matched) {
+                    return;
+                }
+                
+                cardElement.classList.add('flipped');
+                cards[index].flipped = true;
+                flippedCards.push(index);
+                
+                playSound('tap');
+                
+                // Если перевернуты 2 карты, проверяем на совпадение
+                if (flippedCards.length === 2) {
+                    checkForMatch();
+                }
+            }
+            
+            // Проверка на совпадение
+            function checkForMatch() {
+                const [firstIndex, secondIndex] = flippedCards;
+                
+                if (cards[firstIndex].value === cards[secondIndex].value) {
+                    // Совпадение найдено
+                    cards[firstIndex].matched = true;
+                    cards[secondIndex].matched = true;
+                    matchedPairs++;
+                    
+                    playSound('success');
+                    
+                    // Проверяем, завершена ли игра
+                    if (matchedPairs === totalPairs) {
+                        levelComplete();
+                    }
+                    
+                    flippedCards = [];
+                } else {
+                    // Не совпали
+                    playSound('error');
+                    
+                    timer = setTimeout(() => {
+                        cards[firstIndex].element.classList.remove('flipped');
+                        cards[secondIndex].element.classList.remove('flipped');
+                        cards[firstIndex].flipped = false;
+                        cards[secondIndex].flipped = false;
+                        flippedCards = [];
+                    }, 1000);
+                }
+            }
+            
+            // Уровень завершен
+            function levelComplete() {
+                score += level * 10;
+                level++;
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestDisplay.textContent = bestScore;
+                    saveProgress();
+                }
+                
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                
+                showMessage('Уровень пройден!', 'level-up');
+                
+                setTimeout(() => {
+                    totalPairs = 4 + Math.floor(level / 2);
+                    createBoard();
+                }, 1500);
+            }
+            
+            // Инициализация
+            loadProgress();
+            startBtn.addEventListener('click', startGame);
+        }
+        
+        // ==================== Лабиринт взгляда ====================
+        function initEyeMaze() {
+            const maze = document.getElementById('em-maze');
+            const startBtn = document.getElementById('em-start-btn');
+            const levelDisplay = document.getElementById('em-level');
+            const scoreDisplay = document.getElementById('em-score');
+            const bestDisplay = document.getElementById('em-best');
+            
+            let level = 1;
+            let score = 0;
+            let bestScore = 0;
+            let isPlaying = false;
+            let mazePaths = [];
+            let startPos, endPos;
+            let currentPath = [];
+            let isDrawing = false;
+            
+            // Загрузка прогресса
+            function loadProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress');
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    bestScore = progress.eyeMaze?.bestScore || 0;
+                    bestDisplay.textContent = bestScore;
+                }
+            }
+            
+            // Сохранение прогресса
+            function saveProgress() {
+                const savedProgress = localStorage.getItem('brainFitProgress') || '{}';
+                const progress = JSON.parse(savedProgress);
+                
+                progress.eyeMaze = {
+                    bestScore: Math.max(bestScore, progress.eyeMaze?.bestScore || 0)
+                };
+                
+                localStorage.setItem('brainFitProgress', JSON.stringify(progress));
+            }
+            
+            // Начало игры
+            function startGame() {
+                if (isPlaying) return;
+                
+                level = 1;
+                score = 0;
+                isPlaying = true;
+                
+                startBtn.disabled = true;
+                startBtn.textContent = 'Играем...';
+                
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                
+                createMaze();
+            }
+            
+            // Создание лабиринта
+            function createMaze() {
+                maze.innerHTML = '';
+                mazePaths = [];
+                currentPath = [];
+                
+                const size = 10 + level * 2; // Увеличиваем сложность с уровнем
+                const cellSize = Math.min(300, window.innerWidth * 0.8) / size;
+                
+                // Создаем пути лабиринта
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const path = document.createElement('div');
+                        path.className = 'maze-path';
+                        path.style.width = `${cellSize}px`;
+                        path.style.height = `${cellSize}px`;
+                        path.style.left = `${x * cellSize}px`;
+                        path.style.top = `${y * cellSize}px`;
+                        
+                        maze.appendChild(path);
+                        mazePaths.push(path);
+                    }
+                }
+                
+                // Выбираем стартовую и конечную позиции
+                startPos = Math.floor(Math.random() * size);
+                endPos = size * (size - 1) + Math.floor(Math.random() * size);
+                
+                mazePaths[startPos].classList.add('maze-start');
+                mazePaths[endPos].classList.add('maze-end');
+                
+                // Генерируем путь
+                generatePath(startPos, endPos, size);
+                
+                // Добавляем обработчики событий
+                maze.addEventListener('mousedown', startDrawing);
+                maze.addEventListener('mousemove', draw);
+                maze.addEventListener('mouseup', stopDrawing);
+                maze.addEventListener('mouseleave', stopDrawing);
+                
+                maze.addEventListener('touchstart', handleTouchStart);
+                maze.addEventListener('touchmove', handleTouchMove);
+                maze.addEventListener('touchend', handleTouchEnd);
+            }
+            
+            // Генерация пути
+            function generatePath(start, end, size) {
+                let current = start;
+                const visited = new Set([start]);
+                const path = [start];
+                
+                while (current !== end) {
+                    const neighbors = [];
+                    const x = current % size;
+                    const y = Math.floor(current / size);
+                    
+                    // Добавляем соседей
+                    if (x > 0) neighbors.push(current - 1);
+                    if (x < size - 1) neighbors.push(current + 1);
+                    if (y > 0) neighbors.push(current - size);
+                    if (y < size - 1) neighbors.push(current + size);
+                    
+                    // Фильтруем посещенные
+                    const unvisitedNeighbors = neighbors.filter(n => !visited.has(n));
+                    
+                    if (unvisitedNeighbors.length === 0) {
+                        // Возвращаемся назад
+                        path.pop();
+                        current = path[path.length - 1];
+                    } else {
+                        // Выбираем случайного соседа
+                        const next = unvisitedNeighbors[Math.floor(Math.random() * unvisitedNeighbors.length)];
+                        visited.add(next);
+                        path.push(next);
+                        current = next;
+                    }
+                }
+                
+                // Помечаем правильный путь
+                path.forEach(index => {
+                    mazePaths[index].dataset.isPath = 'true';
+                });
+            }
+            
+            // Начало рисования пути
+            function startDrawing(e) {
+                if (!isPlaying) return;
+                
+                isDrawing = true;
+                const cell = getCellFromEvent(e);
+                if (cell) checkCell(cell);
+            }
+            
+            // Рисование пути
+            function draw(e) {
+                if (!isPlaying || !isDrawing) return;
+                
+                const cell = getCellFromEvent(e);
+                if (cell) checkCell(cell);
+            }
+            
+            // Окончание рисования
+            function stopDrawing() {
+                if (!isPlaying) return;
+                
+                isDrawing = false;
+                
+                // Проверяем, дошли ли до конца
+                if (currentPath.includes(endPos)) {
+                    levelComplete();
+                } else if (currentPath.length > 0) {
+                    // Показываем ошибку
+                    currentPath.forEach(index => {
+                        if (!mazePaths[index].dataset.isPath) {
+                            mazePaths[index].classList.add('maze-error');
+                        }
+                    });
+                    
+                    playSound('error');
+                    vibrate();
+                    
+                    setTimeout(() => {
+                        currentPath.forEach(index => {
+                            mazePaths[index].classList.remove('maze-error');
+                        });
+                        currentPath = [];
+                    }, 1000);
+                }
+            }
+            
+            // Обработка касаний (для мобильных устройств)
+            function handleTouchStart(e) {
+                e.preventDefault();
+                startDrawing(e.touches[0]);
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                draw(e.touches[0]);
+            }
+            
+            function handleTouchEnd(e) {
+                e.preventDefault();
+                stopDrawing();
+            }
+            
+            // Получение ячейки из события
+            function getCellFromEvent(e) {
+                const rect = maze.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const size = 10 + level * 2;
+                const cellSize = Math.min(300, window.innerWidth * 0.8) / size;
+                const col = Math.floor(x / cellSize);
+                const row = Math.floor(y / cellSize);
+                
+                if (col >= 0 && col < size && row >= 0 && row < size) {
+                    return row * size + col;
+                }
+                
+                return null;
+            }
+            
+            // Проверка ячейки
+            function checkCell(index) {
+                if (currentPath.includes(index)) return;
+                
+                // Если это первая ячейка, должна быть стартовая
+                if (currentPath.length === 0 && index !== startPos) return;
+                
+                // Проверяем, что ячейка соседняя с последней в пути
+                if (currentPath.length > 0) {
+                    const last = currentPath[currentPath.length - 1];
+                    const size = 10 + level * 2;
+                    const diff = Math.abs(index - last);
+                    
+                    if (diff !== 1 && diff !== size) return;
+                }
+                
+                currentPath.push(index);
+                mazePaths[index].classList.add('active');
+                
+                // Если дошли до конца
+                if (index === endPos) {
+                    playSound('success');
+                }
+            }
+            
+            // Уровень завершен
+            function levelComplete() {
+                score += level * 5;
+                level++;
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestDisplay.textContent = bestScore;
+                    saveProgress();
+                }
+                
+                levelDisplay.textContent = level;
+                scoreDisplay.textContent = score;
+                
+                showMessage('Уровень пройден!', 'level-up');
+                
+                setTimeout(() => {
+                    createMaze();
+                }, 1500);
+            }
+            
+            // Инициализация
+            loadProgress();
+            startBtn.addEventListener('click', startGame);
+        }
+    </script>
+</body>
+</html>
